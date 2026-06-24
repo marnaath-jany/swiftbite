@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -10,7 +10,7 @@ function slugify(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isShopOwner = searchParams.get("role") === "shop_owner";
@@ -32,11 +32,10 @@ export default function SignupPage() {
     min_order: "5.00",
   });
 
-    const signUp = async () => {
+  const signUp = async () => {
     setError("");
     setLoading(true);
 
-    // Step 1 — Create auth user
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
@@ -49,6 +48,12 @@ export default function SignupPage() {
       return;
     }
 
+    if (!data.user && data.session === null) {
+      setError("Please check your email and confirm your account before signing in.");
+      setLoading(false);
+      return;
+    }
+
     const userId = data.user?.id;
     if (!userId) {
       setError("Signup failed. Please try again.");
@@ -56,7 +61,6 @@ export default function SignupPage() {
       return;
     }
 
-    // Step 2 — Sign in immediately to get active session
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: form.email,
       password: form.password,
@@ -68,14 +72,12 @@ export default function SignupPage() {
       return;
     }
 
-    // Step 3 — Manually insert profile (don't rely on trigger)
     await supabase.from("profiles").upsert({
       id: userId,
       full_name: form.full_name,
       role: isShopOwner ? "shop_owner" : "customer",
     });
 
-    // Step 4 — Insert shop if shop owner
     if (isShopOwner) {
       const slug = slugify(form.shop_name);
       const { error: shopError } = await supabase.from("shops").insert({
@@ -96,9 +98,9 @@ export default function SignupPage() {
         return;
       }
 
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     } else {
-      router.push("/shops");
+      window.location.href = "/shops";
     }
   };
 
@@ -119,7 +121,6 @@ export default function SignupPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl border border-gray-200 p-8 w-full max-w-md space-y-6">
 
-        {/* Logo */}
         <div className="text-center">
           <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center mx-auto mb-3">
             <span className="text-white font-bold text-lg">S</span>
@@ -132,7 +133,6 @@ export default function SignupPage() {
           </p>
         </div>
 
-        {/* Step indicator */}
         {isShopOwner && (
           <div className="flex gap-2">
             {[1, 2].map((s) => (
@@ -146,7 +146,6 @@ export default function SignupPage() {
           </div>
         )}
 
-        {/* Step 1 — Account details */}
         {step === 1 && (
           <div className="space-y-3">
             <div>
@@ -192,7 +191,6 @@ export default function SignupPage() {
           </div>
         )}
 
-        {/* Step 2 — Shop details */}
         {step === 2 && isShopOwner && (
           <div className="space-y-3">
             <div>
@@ -262,7 +260,6 @@ export default function SignupPage() {
           <p className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
         )}
 
-        {/* Buttons */}
         <div className="space-y-2">
           {isShopOwner && step === 1 ? (
             <button
@@ -277,11 +274,7 @@ export default function SignupPage() {
               disabled={loading}
               className="w-full bg-gray-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
-              {loading
-                ? "Creating account..."
-                : isShopOwner
-                ? "Open my shop"
-                : "Create account"}
+              {loading ? "Creating account..." : isShopOwner ? "Open my shop" : "Create account"}
             </button>
           )}
 
@@ -304,5 +297,17 @@ export default function SignupPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center text-sm text-gray-400">
+        Loading...
+      </div>
+    }>
+      <SignupForm />
+    </Suspense>
   );
 }
