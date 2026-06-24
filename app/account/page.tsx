@@ -5,7 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ShoppingBag, LogOut, User, Clock } from "lucide-react";
+import { ShoppingBag, Clock } from "lucide-react";
+import Navbar from "@/components/Navbar";
 
 interface Order {
   id: string;
@@ -18,7 +19,7 @@ interface Order {
 }
 
 export default function AccountPage() {
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, profile, loading } = useAuth();
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
@@ -41,11 +42,6 @@ export default function AccountPage() {
     setOrdersLoading(false);
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/");
-  };
-
   const statusStyles: Record<string, string> = {
     Pending: "bg-blue-100 text-blue-700",
     Preparing: "bg-amber-100 text-amber-700",
@@ -62,31 +58,26 @@ export default function AccountPage() {
   }
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      <div className="flex items-center justify-center py-24 text-sm text-gray-400">
+        Loading...
+      </div>
+    </div>
   );
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navbar />
 
       {/* Header */}
       <div className="bg-black text-white px-6 py-8">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-              <User size={20} className="text-white" />
-            </div>
-            <div>
-              <p className="font-semibold">{profile?.full_name ?? "My Account"}</p>
-              <p className="text-sm text-gray-400">{user?.email}</p>
-            </div>
-          </div>
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            <LogOut size={16} />
-            Sign out
-          </button>
+        <div className="max-w-2xl mx-auto">
+          <h1 className="text-xl font-semibold">My Account</h1>
+          <p className="text-sm text-gray-400 mt-1">{user?.email}</p>
+          {profile?.full_name && (
+            <p className="text-sm text-gray-300 mt-0.5">{profile.full_name}</p>
+          )}
         </div>
       </div>
 
@@ -117,7 +108,9 @@ export default function AccountPage() {
           </div>
 
           {ordersLoading ? (
-            <div className="text-center text-sm text-gray-400 py-12">Loading orders...</div>
+            <div className="text-center text-sm text-gray-400 py-12">
+              Loading orders...
+            </div>
           ) : orders.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <p className="text-sm text-gray-400">No orders yet</p>
@@ -136,8 +129,12 @@ export default function AccountPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-semibold text-gray-900">{order.order_number}</p>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusStyles[order.status] ?? "bg-gray-100 text-gray-500"}`}>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {order.order_number}
+                          </p>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            statusStyles[order.status] ?? "bg-gray-100 text-gray-500"
+                          }`}>
                             {order.status}
                           </span>
                         </div>
@@ -147,8 +144,12 @@ export default function AccountPage() {
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-semibold text-gray-900">${Number(order.total).toFixed(2)}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{timeAgo(order.created_at)}</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          ${Number(order.total).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {timeAgo(order.created_at)}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -156,6 +157,16 @@ export default function AccountPage() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Browse more */}
+        <div className="text-center">
+          <Link
+            href="/shops"
+            className="text-sm text-gray-500 hover:text-gray-900 transition-colors underline underline-offset-2"
+          >
+            Browse shops
+          </Link>
         </div>
 
       </div>
